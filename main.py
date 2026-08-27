@@ -16,6 +16,13 @@ import segno
 DB_PATH = os.environ.get("DB_PATH", "catu.db")
 STATIC = Path(__file__).parent / "static"
 FRIDAY_PHASES = ["14h–15h", "15h–16h", "16h–17h", "17h–18h"]
+
+def clean_creneau(creneau: str) -> str:
+    """Accepte 'Vendredi 14h–15h' ou '14h–15h'"""
+    for suffix in FRIDAY_PHASES:
+        if creneau.endswith(suffix):
+            return suffix
+    return creneau
 PRIX_PANIER = 13  # €
 SEED_FERME = "catu"
 
@@ -142,7 +149,7 @@ async def reserver(request: Request):
     prenom = body.get("prenom", "").strip()
     tel = body.get("tel", "").strip()
     qte = int(body.get("qte", 1))
-    creneau = body.get("creneau", FRIDAY_PHASES[0])
+    creneau = clean_creneau(body.get("creneau", FRIDAY_PHASES[0]))
 
     if not prenom or not tel:
         raise HTTPException(400, "Prénom et téléphone requis")
