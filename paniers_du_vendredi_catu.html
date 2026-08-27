@@ -376,7 +376,7 @@ function realOrder(e){
   const prenom = form.querySelector('input[placeholder*="Chris"]').value || form.querySelector('input').value;
   const tel = (form.querySelector('input[placeholder*="06"]')||form.querySelectorAll('input')[1]).value;
   const qty = document.getElementById('qty').value;
-  const creneau = form.querySelector('select:last-of-type').value;
+  const creneau = form.querySelector('select:last-of-type').value.replace('Vendredi ','');
 
   const btn = form.querySelector('.cta.green');
   btn.disabled=true; btn.textContent='Réservation en cours…';
