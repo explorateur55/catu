@@ -221,7 +221,7 @@ input,select{
       <div class="grid" style="margin-top:24px">
         <section id="reservation" class="card">
           <div class="section-title"><h2>Réserver mon panier</h2><span class="muted">≈ 30 secondes</span></div>
-          <form onsubmit="fakeOrder(event)">
+          <form onsubmit="realOrder(event)">
             <div class="row">
               <div><label>Prénom</label><input required placeholder="Chris"></div>
               <div><label>Téléphone</label><input required placeholder="06 12 34 56 78"></div>
@@ -282,13 +282,13 @@ input,select{
               <div><strong>Julie Martin</strong><br><span class="muted">#A042 • 1 panier</span></div>
               <div class="hide-mobile">15h–16h</div>
               <span class="status paid">Payé</span>
-              <button class="cta green" style="padding:10px 12px" onclick="validate(this)">Valider</button>
+              <button class="cta green" style="padding:10px 12px" >Valider</button>
             </div>
             <div class="order">
               <div><strong>Marc D.</strong><br><span class="muted">#A041 • 2 paniers</span></div>
               <div class="hide-mobile">14h–15h</div>
               <span class="status ready">Prêt</span>
-              <button class="cta green" style="padding:10px 12px" onclick="validate(this)">Valider</button>
+              <button class="cta green" style="padding:10px 12px" >Valider</button>
             </div>
             <div class="order">
               <div><strong>Sophie R.</strong><br><span class="muted">#A038 • 1 panier</span></div>
@@ -339,40 +339,145 @@ input,select{
 </div>
 
 <script>
+const API_BASE = window.location.origin;
+let currentCode = '';
+
+// ── Navigation ──
 function showView(which){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById(which).classList.add('active');
   document.getElementById('btnClient').classList.toggle('active',which==='client');
   document.getElementById('btnProducer').classList.toggle('active',which==='producer');
   window.scrollTo({top:0,behavior:'smooth'});
+  if(which==='producer') loadProducer();
+  if(which==='client') loadClient();
 }
+
 function updateTotal(){
   const qty=parseInt(document.getElementById('qty').value||1);
   document.getElementById('total').textContent=(qty*13)+' €';
 }
-function fakeOrder(e){
+
+// ── Client: charger les dispo ──
+function loadClient(){
+  fetch(API_BASE+'/api/paniers').then(r=>r.json()).then(d=>{
+    document.querySelector('.pill').textContent='Encore '+d.disponibles+' paniers';
+    let qty=document.getElementById('qty');
+    for(let i=qty.options.length-1;i>=0;i--){
+      if(parseInt(qty.options[i].value) > d.disponibles) qty.remove(i);
+    }
+  }).catch(console.error);
+}
+
+// ── Réservation réelle ──
+function realOrder(e){
   e.preventDefault();
-  alert('Démo : réservation enregistrée. Le client recevrait ici sa confirmation et son QR code.');
+  const form = e.target;
+  const prenom = form.querySelector('input[placeholder*="Chris"]').value || form.querySelector('input').value;
+  const tel = (form.querySelector('input[placeholder*="06"]')||form.querySelectorAll('input')[1]).value;
+  const qty = document.getElementById('qty').value;
+  const creneau = form.querySelector('select:last-of-type').value;
+
+  const btn = form.querySelector('.cta.green');
+  btn.disabled=true; btn.textContent='Réservation en cours…';
+
+  fetch(API_BASE+'/api/reservations',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({prenom,tel,qte:parseInt(qty),creneau})
+  }).then(r=>r.json()).then(d=>{
+    if(d.status==='ok'){
+      currentCode=d.code;
+      showQR(d);
+    } else {
+      alert(d.detail||'Erreur');
+    }
+  }).catch(console.error).finally(()=>{
+    btn.disabled=false; btn.textContent='Payer et réserver';
+  });
 }
+
+function showQR(data){
+  // Cacher le formulaire, montrer la confirmation
+  const grid = document.getElementById('reservation').closest('.grid');
+  grid.innerHTML=`
+    <section class="card" style="text-align:center;grid-column:1/-1">
+      <div class="section-title"><h2>✅ Réservation confirmée</h2><span class="pill">Commande #${data.code}</span></div>
+      <div style="margin:16px 0"><img src="${API_BASE}/api/qr/${data.code}.png" style="width:220px;height:220px;border:14px solid white;border-radius:18px;box-shadow:var(--shadow)"></div>
+      <p><strong>${data.creneau}</strong> · ${data.paniers} panier(s) · Total: <strong>${data.total} €</strong></p>
+      <p class="muted" style="font-size:13px">Présentez ce QR code à la ferme pour le retrait.</p>
+      <button class="cta" onclick="resetOrder()" style="margin-top:12px">⬅ Réserver un autre</button>
+    </section>
+  `;
+}
+
+function resetOrder(){
+  location.reload();
+}
+
+// ── Producteur: charger les donnes ──
+function loadProducer(){
+  // KPIs
+  fetch(API_BASE+'/api/kpis').then(r=>r.json()).then(d=>{
+    document.querySelector('#producer .kpi:nth-child(1) strong').textContent=d.reserves;
+    document.querySelector('#producer .kpi:nth-child(2) strong').textContent=d.retires;
+    document.querySelector('#producer .kpi:nth-child(3) strong').textContent=d.ca+' €';
+    // Stock
+    document.getElementById('available').textContent=d.disponibles;
+  }).catch(console.error);
+
+  // Commandes
+  fetch(API_BASE+'/api/commandes').then(r=>r.json()).then(cmds=>{
+    const container = document.querySelector('#producer .orders');
+    if(!cmds.length){container.innerHTML='<p class=notice>Aucune commande pour le moment.</p>';return;}
+    container.innerHTML = cmds.map(o=>`
+      <div class="order" id="cmd-${o.id}">
+        <div><strong>${o.prenom}</strong><br><span class="muted">#${o.code} · ${o.qte} panier(s)</span></div>
+        <div class="hide-mobile">${o.creneau}</div>
+        <span class="status ${o.retiree?'done':(o.payee?'paid':'ready')}">${o.retiree?'Retiré':(o.payee?'Payé':'Prêt')}</span>
+        <button class="cta green" style="padding:10px 12px" onclick="validerRetrait(this,'${o.code}')" ${o.retiree?'disabled':''}>Valider</button>
+      </div>
+    `).join('');
+  }).catch(console.error);
+}
+
+function validerRetrait(btn, code){
+  btn.disabled=true; btn.textContent='…';
+  fetch(API_BASE+'/api/commandes/'+code+'/valider',{method:'POST'}).then(r=>r.json()).then(d=>{
+    if(d.status==='ok'){
+      btn.textContent='OK'; btn.style.background='#e9ece8'; btn.style.color='#687269'
+      const row = btn.closest('.order');
+      row.querySelector('.status').className='status done';
+      row.querySelector('.status').textContent='Retiré';
+      loadProducer();
+    }
+  }).catch(console.error);
+}
+
 function simulateScan(){
-  document.getElementById('scanMsg').style.display='block';
+  const code = prompt('Code de retrait (ex: A001) :','');
+  if(!code) return;
+  fetch(API_BASE+'/api/commandes/'+code+'/valider',{method:'POST'}).then(r=>r.json()).then(d=>{
+    const msg = document.getElementById('scanMsg');
+    msg.style.display='block';
+    if(d.status==='ok'){
+      msg.style.background='#e8f4e8'; msg.style.color='#386942'; msg.style.borderColor='#cfe3d0';
+      msg.textContent='✓ Commande #'+code+' — Retrait validé';
+      loadProducer();
+    } else {
+      msg.style.background='#fde8e8'; msg.style.color='#9a3e3e'; msg.style.borderColor='#e8d0d0';
+      msg.textContent='✗ '+ (d.detail||'Erreur');
+    }
+  }).catch(console.error);
 }
-function validate(btn){
-  const row=btn.closest('.order');
-  row.querySelector('.status').className='status done';
-  row.querySelector('.status').textContent='Retiré';
-  btn.textContent='OK';
-  btn.disabled=true;
-  btn.style.background='#e9ece8';
-  btn.style.color='#687269';
-}
-function changeStock(id,delta){
-  const el=document.getElementById(id);
-  let n=parseInt(el.textContent)+delta;
-  if(n<32)n=32;
-  el.textContent=n;
-  document.getElementById('available').textContent=n-32;
-}
+
+// Remplacer les handlers
+document.addEventListener('DOMContentLoaded',()=>{
+  const forms = document.querySelectorAll('form');
+  forms.forEach(f=>{
+    f.addEventListener('submit',realOrder);
+  });
+  loadClient();
+});
 </script>
 </body>
 <!-- depot v2 -->
