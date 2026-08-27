@@ -1,6 +1,0 @@
-services:
-  app:
-    build: .
-    ports:
-      - "8091:80"
-    restart: unless-stopped
