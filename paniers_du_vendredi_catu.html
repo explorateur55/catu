@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catu — Paniers du vendredi</title>
+<style>
+:root{
+  --bg:#f5f2e9;
+  --card:#fffdf8;
+  --ink:#20302a;
+  --muted:#6f7d74;
+  --green:#2f6f4e;
+  --green2:#76a879;
+  --cream:#efe7d2;
+  --orange:#e89a4a;
+  --red:#ba5b4a;
+  --line:#dde3da;
+  --shadow:0 18px 45px rgba(44,68,52,.14);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:
+    radial-gradient(circle at 10% 0%,rgba(118,168,121,.20),transparent 30%),
+    radial-gradient(circle at 100% 20%,rgba(232,154,74,.12),transparent 28%),
+    var(--bg);
+  color:var(--ink);
+}
+button,input,select{font:inherit}
+.shell{max-width:1180px;margin:auto;padding:22px}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:18px;
+  background:rgba(255,253,248,.86);backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,.7);border-radius:24px;padding:14px 18px;
+  box-shadow:var(--shadow);position:sticky;top:12px;z-index:20;
+}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{
+  width:48px;height:48px;border-radius:50%;
+  display:grid;place-items:center;font-size:25px;
+  background:linear-gradient(145deg,#dbe9c9,#86b47a);
+  border:3px solid #fff;box-shadow:0 6px 18px rgba(47,111,78,.2)
+}
+.brand strong{display:block;font-size:18px}
+.brand span{font-size:12px;color:var(--muted)}
+.switch{
+  display:flex;background:#edf1eb;border-radius:16px;padding:4px;gap:4px;
+}
+.switch button{
+  border:0;background:transparent;padding:10px 16px;border-radius:12px;
+  cursor:pointer;color:#5f6a63;font-weight:700
+}
+.switch button.active{background:white;color:var(--green);box-shadow:0 3px 12px rgba(0,0,0,.08)}
+main{padding:28px 0}
+.view{display:none}
+.view.active{display:block}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:24px}
+.card{
+  background:var(--card);border:1px solid rgba(255,255,255,.9);
+  border-radius:28px;padding:24px;box-shadow:var(--shadow)
+}
+.hero{
+  min-height:470px;position:relative;overflow:hidden;
+  background:
+    linear-gradient(180deg,rgba(27,48,37,.05),rgba(27,48,37,.72)),
+    url('https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80') center/cover;
+  color:white;display:flex;align-items:flex-end
+}
+.hero .content{position:relative;z-index:2;max-width:610px}
+.badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 12px;border-radius:999px;
+  background:rgba(255,255,255,.18);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.28);font-weight:800;font-size:13px
+}
+.hero h1{font-size:clamp(34px,5vw,64px);line-height:.98;margin:14px 0 14px}
+.hero p{font-size:18px;max-width:620px;color:#f4f4ef}
+.price{display:flex;align-items:end;gap:10px;margin:20px 0}
+.price strong{font-size:38px}
+.price span{opacity:.86;margin-bottom:7px}
+.cta{
+  border:0;border-radius:16px;padding:15px 20px;cursor:pointer;
+  background:var(--orange);color:#2b241c;font-weight:900;
+  box-shadow:0 10px 25px rgba(232,154,74,.30)
+}
+.cta.green{background:var(--green);color:white}
+.section-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.section-title h2{margin:0;font-size:22px}
+.muted{color:var(--muted)}
+.basket{
+  display:grid;grid-template-columns:90px 1fr auto;gap:14px;align-items:center;
+  padding:14px;border:1px solid var(--line);border-radius:20px;margin-bottom:12px;background:#fff
+}
+.basket img{width:90px;height:76px;object-fit:cover;border-radius:16px}
+.basket h3{margin:0 0 5px;font-size:17px}
+.pill{
+  display:inline-flex;padding:6px 9px;border-radius:999px;background:#eef5eb;
+  color:var(--green);font-size:12px;font-weight:800
+}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.kpi{padding:16px;border-radius:18px;background:#f3f5ef;border:1px solid var(--line)}
+.kpi strong{font-size:25px;display:block}
+form .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{font-size:13px;font-weight:800;color:#5c685f;display:block;margin:12px 0 6px}
+input,select{
+  width:100%;padding:13px 14px;border-radius:14px;border:1px solid #d7ddd5;background:white;color:var(--ink)
+}
+.orderbox{
+  padding:18px;border-radius:20px;background:linear-gradient(145deg,#edf4e9,#fff);
+  border:1px solid #dce7d8
+}
+.total{display:flex;justify-content:space-between;align-items:center;font-size:20px;font-weight:900;margin-top:14px}
+.qr{
+  width:210px;height:210px;margin:18px auto 8px;background:
+    linear-gradient(90deg,#1e2c25 10px,transparent 10px) 0 0/30px 30px,
+    linear-gradient(#1e2c25 10px,transparent 10px) 0 0/30px 30px,
+    white;
+  border:14px solid white;outline:1px solid #d9ddd8;border-radius:18px;
+  display:grid;place-items:center;overflow:hidden
+}
+.qr:after{content:"CATU\\A #A042";white-space:pre;text-align:center;background:white;padding:10px;font-weight:900}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 18px}
+.tabs button{border:1px solid var(--line);background:white;padding:9px 12px;border-radius:12px;cursor:pointer;font-weight:800}
+.tabs button.active{background:var(--green);color:white;border-color:var(--green)}
+.orders{display:grid;gap:10px}
+.order{
+  display:grid;grid-template-columns:1.2fr .7fr .7fr auto;gap:10px;align-items:center;
+  border:1px solid var(--line);background:white;border-radius:18px;padding:14px
+}
+.status{font-size:12px;font-weight:900;padding:7px 9px;border-radius:999px;text-align:center}
+.status.ready{background:#e7f3e5;color:#367044}
+.status.paid{background:#e8eff9;color:#315b83}
+.status.done{background:#efefef;color:#666}
+.scan{
+  min-height:300px;border-radius:24px;border:2px dashed #b9c6ba;
+  background:
+    linear-gradient(rgba(28,45,34,.28),rgba(28,45,34,.28)),
+    url('https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=900&q=80') center/cover;
+  display:grid;place-items:center;color:white;text-align:center;padding:30px;position:relative;overflow:hidden
+}
+.scanbox{width:180px;height:180px;border:4px solid white;border-radius:22px;box-shadow:0 0 0 999px rgba(0,0,0,.12)}
+.scan p{position:absolute;bottom:18px;font-weight:800;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+.stockline{display:grid;grid-template-columns:1fr 90px 90px;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.stockline:last-child{border-bottom:0}
+.stockline button{border:0;background:#edf3eb;border-radius:10px;padding:9px;font-weight:900;cursor:pointer}
+.notice{padding:13px 15px;border-radius:16px;background:#fff3df;border:1px solid #f2d4a2;color:#7d5923;font-size:13px;font-weight:700}
+.bottom-nav{display:none}
+@media(max-width:800px){
+  .shell{padding:12px}
+  .topbar{top:6px;border-radius:20px;padding:10px 12px}
+  .brand span{display:none}
+  .switch button{padding:9px 11px;font-size:13px}
+  main{padding:16px 0 80px}
+  .grid{grid-template-columns:1fr}
+  .card{border-radius:22px;padding:18px}
+  .hero{min-height:470px}
+  .hero h1{font-size:42px}
+  form .row{grid-template-columns:1fr}
+  .kpis{grid-template-columns:1fr 1fr}
+  .order{grid-template-columns:1fr auto}
+  .order .hide-mobile{display:none}
+  .bottom-nav{
+    display:flex;position:fixed;left:12px;right:12px;bottom:10px;z-index:30;
+    background:rgba(255,255,255,.92);backdrop-filter:blur(12px);
+    border:1px solid #eee;border-radius:20px;padding:8px;justify-content:space-around;box-shadow:var(--shadow)
+  }
+  .bottom-nav button{border:0;background:transparent;font-size:12px;color:#687269;font-weight:800}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🥕</div>
+      <div><strong>CATU</strong><span>Les paniers du vendredi</span></div>
+    </div>
+    <div class="switch">
+      <button id="btnClient" class="active" onclick="showView('client')">👤 Client</button>
+      <button id="btnProducer" onclick="showView('producer')">🌱 Producteur</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- CLIENT -->
+    <section id="client" class="view active">
+      <div class="grid">
+        <article class="card hero">
+          <div class="content">
+            <span class="badge">🌿 Récolté localement • Retrait vendredi 14h–18h</span>
+            <h1>Des légumes qui ont encore le goût des légumes.</h1>
+            <p>Un panier frais, simple, local. Réserve en quelques secondes et récupère-le directement à la ferme vendredi.</p>
+            <div class="price"><strong>13 €</strong><span>/ panier</span></div>
+            <button class="cta" onclick="document.getElementById('reservation').scrollIntoView({behavior:'smooth'})">Réserver mon panier</button>
+          </div>
+        </article>
+
+        <aside class="card">
+          <div class="section-title">
+            <h2>Cette semaine</h2><span class="pill">Encore 18 paniers</span>
+          </div>
+
+          <div class="basket">
+            <img src="https://images.unsplash.com/photo-1566385101042-1a0aa0c1268c?auto=format&fit=crop&w=400&q=80">
+            <div><h3>Panier fraîcheur</h3><div class="muted">Tomates, courgettes, salade, aubergines, poivrons…</div></div>
+            <strong>13 €</strong>
+          </div>
+
+          <div class="basket">
+            <img src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=400&q=80">
+            <div><h3>Récolte du moment</h3><div class="muted">Composition adaptée aux légumes mûrs disponibles.</div></div>
+            <span class="pill">Local</span>
+          </div>
+
+          <div class="notice">Le contenu peut légèrement varier selon la récolte. C’est justement le principe : frais, saisonnier, sans légumes qui traversent l’Europe.</div>
+        </aside>
+      </div>
+
+      <div class="grid" style="margin-top:24px">
+        <section id="reservation" class="card">
+          <div class="section-title"><h2>Réserver mon panier</h2><span class="muted">≈ 30 secondes</span></div>
+          <form onsubmit="fakeOrder(event)">
+            <div class="row">
+              <div><label>Prénom</label><input required placeholder="Chris"></div>
+              <div><label>Téléphone</label><input required placeholder="06 12 34 56 78"></div>
+            </div>
+            <label>Nombre de paniers</label>
+            <select id="qty" onchange="updateTotal()">
+              <option value="1">1 panier</option>
+              <option value="2">2 paniers</option>
+              <option value="3">3 paniers</option>
+              <option value="4">4 paniers</option>
+            </select>
+            <label>Créneau de retrait</label>
+            <select>
+              <option>Vendredi 14h–15h</option>
+              <option>Vendredi 15h–16h</option>
+              <option>Vendredi 16h–17h</option>
+              <option>Vendredi 17h–18h</option>
+            </select>
+            <div class="orderbox" style="margin-top:16px">
+              <div class="muted">Commande</div>
+              <div class="total"><span>Total</span><span id="total">13 €</span></div>
+            </div>
+            <button class="cta green" style="width:100%;margin-top:14px">Payer et réserver</button>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="section-title"><h2>Mon retrait</h2><span class="pill">Commande payée</span></div>
+          <p class="muted">Présente simplement ce QR code à la ferme. Le producteur le scanne et valide ton retrait.</p>
+          <div class="qr"></div>
+          <div style="text-align:center"><strong>Vendredi • 15h–16h</strong><br><span class="muted">Commande #A042 • 1 panier</span></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- PRODUCTEUR -->
+    <section id="producer" class="view">
+      <div class="grid">
+        <section class="card">
+          <div class="section-title">
+            <div><h2>Bonjour Catu 👋</h2><span class="muted">Vendredi 28 août</span></div>
+            <span class="pill">Production ouverte</span>
+          </div>
+          <div class="kpis">
+            <div class="kpi"><span class="muted">Réservés</span><strong>32</strong><span>paniers</span></div>
+            <div class="kpi"><span class="muted">Retirés</span><strong>19</strong><span>clients</span></div>
+            <div class="kpi"><span class="muted">CA</span><strong>416 €</strong><span>payé</span></div>
+          </div>
+
+          <div class="tabs">
+            <button class="active">Aujourd’hui</button>
+            <button>À préparer</button>
+            <button>Retirés</button>
+          </div>
+
+          <div class="orders">
+            <div class="order">
+              <div><strong>Julie Martin</strong><br><span class="muted">#A042 • 1 panier</span></div>
+              <div class="hide-mobile">15h–16h</div>
+              <span class="status paid">Payé</span>
+              <button class="cta green" style="padding:10px 12px" onclick="validate(this)">Valider</button>
+            </div>
+            <div class="order">
+              <div><strong>Marc D.</strong><br><span class="muted">#A041 • 2 paniers</span></div>
+              <div class="hide-mobile">14h–15h</div>
+              <span class="status ready">Prêt</span>
+              <button class="cta green" style="padding:10px 12px" onclick="validate(this)">Valider</button>
+            </div>
+            <div class="order">
+              <div><strong>Sophie R.</strong><br><span class="muted">#A038 • 1 panier</span></div>
+              <div class="hide-mobile">14h–15h</div>
+              <span class="status done">Retiré</span>
+              <button class="cta" style="padding:10px 12px;background:#e9ece8;color:#687269" disabled>OK</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-title"><h2>Scanner un retrait</h2><span class="pill">Caméra</span></div>
+          <div class="scan" onclick="simulateScan()">
+            <div class="scanbox"></div>
+            <p>Place le QR code du client dans le cadre</p>
+          </div>
+          <button class="cta green" style="width:100%;margin-top:14px" onclick="simulateScan()">📷 Scanner le QR client</button>
+          <div id="scanMsg" class="notice" style="display:none;margin-top:12px;background:#e8f4e8;color:#386942;border-color:#cfe3d0">
+            ✓ Commande #A042 trouvée — Julie Martin — 1 panier — Payée
+          </div>
+        </section>
+      </div>
+
+      <div class="grid" style="margin-top:24px">
+        <section class="card">
+          <div class="section-title"><h2>Stock disponible</h2><span class="muted">Pour vendredi</span></div>
+          <div class="stockline"><strong>Paniers prévus</strong><button onclick="changeStock('planned',-1)">−</button><button onclick="changeStock('planned',1)">+</button></div>
+          <div class="stockline"><span>Capacité totale</span><strong id="planned">50</strong><span>paniers</span></div>
+          <div class="stockline"><span>Déjà réservés</span><strong>32</strong><span>paniers</span></div>
+          <div class="stockline"><span>Encore disponibles</span><strong id="available">18</strong><span>paniers</span></div>
+        </section>
+
+        <section class="card">
+          <div class="section-title"><h2>Pilotage simple</h2><span class="pill">Temps réel</span></div>
+          <div class="kpi" style="margin-bottom:10px"><span class="muted">14h–15h</span><strong>8 / 12</strong><span>retraits effectués</span></div>
+          <div class="kpi" style="margin-bottom:10px"><span class="muted">15h–16h</span><strong>6 / 9</strong><span>retraits effectués</span></div>
+          <div class="kpi"><span class="muted">À venir</span><strong>13</strong><span>paniers à remettre</span></div>
+        </section>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="bottom-nav">
+  <button onclick="showView('client')">🥕<br>Commander</button>
+  <button onclick="showView('client');document.getElementById('reservation').scrollIntoView()">🧺<br>Mon panier</button>
+  <button onclick="showView('producer')">🌱<br>Producteur</button>
+</div>
+
+<script>
+function showView(which){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(which).classList.add('active');
+  document.getElementById('btnClient').classList.toggle('active',which==='client');
+  document.getElementById('btnProducer').classList.toggle('active',which==='producer');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function updateTotal(){
+  const qty=parseInt(document.getElementById('qty').value||1);
+  document.getElementById('total').textContent=(qty*13)+' €';
+}
+function fakeOrder(e){
+  e.preventDefault();
+  alert('Démo : réservation enregistrée. Le client recevrait ici sa confirmation et son QR code.');
+}
+function simulateScan(){
+  document.getElementById('scanMsg').style.display='block';
+}
+function validate(btn){
+  const row=btn.closest('.order');
+  row.querySelector('.status').className='status done';
+  row.querySelector('.status').textContent='Retiré';
+  btn.textContent='OK';
+  btn.disabled=true;
+  btn.style.background='#e9ece8';
+  btn.style.color='#687269';
+}
+function changeStock(id,delta){
+  const el=document.getElementById(id);
+  let n=parseInt(el.textContent)+delta;
+  if(n<32)n=32;
+  el.textContent=n;
+  document.getElementById('available').textContent=n-32;
+}
+</script>
+</body>
+<!-- depot v2 -->
+</html>
