@@ -2,5 +2,10 @@ services:
   app:
     build: .
     ports:
-      - "8094:80"
+      - "8095:80"
     restart: unless-stopped
+    volumes:
+      - catu-data:/data
+
+volumes:
+  catu-data:
