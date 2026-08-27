@@ -1,0 +1,7 @@
+services:
+  app:
+    build: .
+    container_name: catu-app
+    ports:
+      - "8091:80"
+    restart: unless-stopped
