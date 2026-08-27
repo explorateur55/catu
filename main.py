@@ -149,7 +149,7 @@ async def reserver(request: Request):
     if qte < 1 or qte > 10:
         raise HTTPException(400, "1 à 10 paniers maximum")
     if creneau not in FRIDAY_PHASES:
-        raise HTTPException(400, "Crénau invalide")
+        raise HTTPException(400, "Créneau invalide")
 
     conn = get_db()
     try:
