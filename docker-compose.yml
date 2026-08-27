@@ -1,1 +1,6 @@
-services:\n  app:\n    build: .\n    ports:\n      - "8092:80"\n    restart: unless-stopped\n
+services:
+  app:
+    build: .
+    ports:
+      - "8092:80"
+    restart: unless-stopped
