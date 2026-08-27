@@ -1,4 +1,5 @@
 FROM python:3.12-slim
+# Build 1787866628 — Greenstuff API v1
 WORKDIR /app
 RUN pip install --no-cache-dir fastapi uvicorn segno
 COPY main.py .
