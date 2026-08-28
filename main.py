@@ -220,7 +220,15 @@ def valider_retrait(code: str, ferme: str = Query(default=SEED_FERME)):
     conn.execute("UPDATE commandes SET retiree=1, retire_le=? WHERE id=?", (now, c["id"]))
     conn.commit()
     conn.close()
-    return {"status": "ok", "code": code, "retire_le": now}
+    return {
+        "status": "ok",
+        "code": code,
+        "prenom": c["prenom"],
+        "qte": c["qte"],
+        "creneau": c["creneau"],
+        "retire_le": now,
+        "message": f"{c['prenom']} — {c['qte']} panier(s) — Retrait validé ✅"
+    }
 
 @app.get("/api/kpis")
 def get_kpis(ferme: str = Query(default=SEED_FERME)):
