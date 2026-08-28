@@ -316,7 +316,8 @@ input,select{
             <p>Place le QR code du client dans le cadre</p>
           </div>
           <input id="scanInput" type="text" placeholder="Code scanné (ex: A001)" style="margin-top:12px;font-weight:800;text-transform:uppercase" onkeydown="if(event.key==='Enter'){doScan()}">
-          <button class="cta green" style="width:100%;margin-top:14px" onclick="doScan()">📷 Scanner le QR client</button>
+          <input type="file" id="scanCam" accept="image/*" capture="environment" style="display:none" onchange="processScan(event)">
+          <button class="cta green" style="width:100%;margin-top:14px" onclick="document.getElementById('scanCam').click()">📷 Scanner le QR client</button>
           <div id="scanMsg" class="notice" style="display:none;margin-top:12px;background:#e8f4e8;color:#386942;border-color:#cfe3d0">
             ✓ Commande #A042 trouvée — Julie Martin — 1 panier — Payée
           </div>
@@ -349,6 +350,7 @@ input,select{
   <button onclick="showView('producer')">🌱<br>Producteur</button>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
 const API_BASE = window.location.origin;
 let currentCode = '';
@@ -473,25 +475,62 @@ function doScan(){
   }
   const msg = document.getElementById('scanMsg');
   msg.style.display='block';
-  msg.innerHTML='<div class=\"scan-anim\">⏳ Scan en cours…</div>';
+  msg.innerHTML='<div class="scan-anim">⏳ Scan en cours…</div>';
 
   fetch(API_BASE+'/api/commandes/'+code+'/valider',{method:'POST'}).then(r=>r.json()).then(d=>{
     if(d.status==='ok'){
-      msg.innerHTML=`<div class=\"scan-anim scan-ok\">
-        <div class=\"scan-icon\">✅</div>
-        <div class=\"scan-nom\">${d.prenom}</div>
-        <div class=\"scan-detail\">${d.qte} paniers achetés, retrait validé</div>
-        <div class=\"scan-code\">Commande #${d.code}</div>
+      msg.innerHTML=`<div class="scan-anim scan-ok">
+        <div class="scan-icon">✅</div>
+        <div class="scan-nom">${d.prenom}</div>
+        <div class="scan-detail">${d.qte} paniers achetés, retrait validé</div>
+        <div class="scan-code">Commande #${d.code}</div>
       </div>`;
       fireworks();
       input.value='';
       loadProducer();
     } else {
-      msg.innerHTML=`<div class=\"scan-anim scan-err\">✗ ${d.detail||'Erreur'}</div>`;
+      msg.innerHTML=`<div class="scan-anim scan-err">✗ ${d.detail||'Erreur'}</div>`;
     }
   }).catch(e=>{
-    msg.innerHTML='<div class=\"scan-anim scan-err\">✗ Erreur réseau</div>';
+    msg.innerHTML='<div class="scan-anim scan-err">✗ Erreur réseau</div>';
   });
+}
+
+function processScan(ev){
+  const file = ev.target.files[0];
+  ev.target.value='';
+  if(!file) return;
+  const msg = document.getElementById('scanMsg');
+  msg.style.display='block';
+  msg.innerHTML='<div class="scan-anim">⏳ Décodage du QR…</div>';
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      try{
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width; canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img,0,0);
+        const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+        const qr = jsQR(imgData.data, imgData.width, imgData.height);
+        if(qr && qr.data){
+          // Notre QR encode: "CATU\nCommande A00x"
+          const m = qr.data.match(/(A\d{3,})/);
+          const code = m ? m[0] : qr.data.trim();
+          document.getElementById('scanInput').value = code;
+          doScan();
+        } else {
+          msg.innerHTML='<div class="scan-anim scan-err">✗ QR non détecté — réessayez avec un meilleur cadrage</div>';
+        }
+      }catch(err){
+        msg.innerHTML='<div class="scan-anim scan-err">✗ Erreur de décodage</div>';
+      }
+    };
+    img.onerror = () => { msg.innerHTML='<div class="scan-anim scan-err">✗ Image illisible</div>'; };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 // Remplacer les handlers
