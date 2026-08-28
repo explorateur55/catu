@@ -1,5 +1,5 @@
 FROM python:3.12-slim
-# Build 1787922908 urlqr
+# Build 1787925465 qrhttps
 WORKDIR /app
 RUN pip install --no-cache-dir fastapi uvicorn segno
 COPY main.py .
