@@ -301,11 +301,12 @@ input,select{
 
         <section class="card">
           <div class="section-title"><h2>Scanner un retrait</h2><span class="pill">Caméra</span></div>
-          <div class="scan" onclick="simulateScan()">
+          <div class="scan" onclick="document.getElementById('scanInput').focus()">
             <div class="scanbox"></div>
             <p>Place le QR code du client dans le cadre</p>
           </div>
-          <button class="cta green" style="width:100%;margin-top:14px" onclick="simulateScan()">📷 Scanner le QR client</button>
+          <input id="scanInput" type="text" placeholder="Code scanné (ex: A001)" style="margin-top:12px;font-weight:800;text-transform:uppercase" onkeydown="if(event.key==='Enter'){doScan()}">
+          <button class="cta green" style="width:100%;margin-top:14px" onclick="doScan()">📷 Scanner le QR client</button>
           <div id="scanMsg" class="notice" style="display:none;margin-top:12px;background:#e8f4e8;color:#386942;border-color:#cfe3d0">
             ✓ Commande #A042 trouvée — Julie Martin — 1 panier — Payée
           </div>
@@ -453,21 +454,32 @@ function validerRetrait(btn, code){
   }).catch(console.error);
 }
 
-function simulateScan(){
-  const code = prompt('Code de retrait (ex: A001) :','');
-  if(!code) return;
+function doScan(){
+  const input = document.getElementById('scanInput');
+  const code = (input.value||'').trim().toUpperCase();
+  if(!code){
+    input.focus();
+    return;
+  }
+  const msg = document.getElementById('scanMsg');
+  msg.style.display='block';
+  msg.style.background='#fff3df'; msg.style.color='#7d5923'; msg.style.borderColor='#f2d4a0';
+  msg.textContent='⏳ Scan de la commande #'+code+'…';
+
   fetch(API_BASE+'/api/commandes/'+code+'/valider',{method:'POST'}).then(r=>r.json()).then(d=>{
-    const msg = document.getElementById('scanMsg');
-    msg.style.display='block';
     if(d.status==='ok'){
       msg.style.background='#e8f4e8'; msg.style.color='#386942'; msg.style.borderColor='#cfe3d0';
       msg.textContent='✓ Commande #'+code+' — Retrait validé';
+      input.value='';
       loadProducer();
     } else {
       msg.style.background='#fde8e8'; msg.style.color='#9a3e3e'; msg.style.borderColor='#e8d0d0';
       msg.textContent='✗ '+ (d.detail||'Erreur');
     }
-  }).catch(console.error);
+  }).catch(e=>{
+    msg.style.background='#fde8e8'; msg.style.color='#9a3e3e'; msg.style.borderColor='#e8d0d0';
+    msg.textContent='✗ Erreur réseau';
+  });
 }
 
 // Remplacer les handlers
