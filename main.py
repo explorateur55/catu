@@ -23,10 +23,25 @@ def clean_creneau(creneau: str) -> str:
         if creneau.endswith(suffix):
             return suffix
     return creneau
-PRIX_PANIER = 13  # €
+PRIX_PANIER = 13  # € (défaut, le prix réel vient de la table fermes)
 SEED_FERME = "catu"
 
-app = FastAPI(title="Greenstuff — Catu API", version="1.0.0")
+app = FastAPI(title="Greenstuff — Catu API", version="2.0.0")
+
+def resolve_ferme(request: Request) -> str:
+    """Détermine le maraîcher d'après le sous-domaine.
+    catu.mapvisibility.click -> 'catu', martin.mapvisibility.click -> 'martin'.
+    En CORS/HTTP direct (localhost), on retombe sur SEED_FERME.
+    """
+    host = request.headers.get("host", "")
+    # Enlève le port et le domaine parent, garde le sous-domaine
+    host_no_port = host.split(":")[0].lower()
+    if "mapvisibility" in host_no_port:
+        sub = host_no_port.split(".")[0]
+        if sub and sub not in ("www", "localhost"):
+            return sub
+        return SEED_FERME
+    return SEED_FERME
 
 # ─── Base SQLite ─────────────────────────────────────
 def get_db() -> sqlite3.Connection:
@@ -38,6 +53,33 @@ def get_db() -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
+
+def next_friday_str() -> str:
+    today = date.today()
+    days_to_friday = (4 - today.weekday()) % 7
+    if days_to_friday == 0:
+        days_to_friday = 7
+    return (today + timedelta(days=days_to_friday)).isoformat()
+
+def ensure_ferme(ferme: str) -> bool:
+    """S'assure qu'une ferme existe et a un stock. Crée si besoin.
+    Retourne True si la ferme est valide et prête, False sinon."""
+    conn = get_db()
+    try:
+        f = conn.execute("SELECT * FROM fermes WHERE slug=?", (ferme,)).fetchone()
+        if not f:
+            conn.close()
+            return False
+        s = conn.execute("SELECT * FROM stocks WHERE ferme=?", (ferme,)).fetchone()
+        if not s:
+            conn.execute("INSERT INTO stocks(ferme,vendredi,total,reserves) VALUES(?,?,?,?)",
+                         (ferme, next_friday_str(), f["capacite"], 0))
+            conn.commit()
+        conn.close()
+        return True
+    except Exception:
+        conn.close()
+        return False
 
 def init_db():
     conn = get_db()
@@ -69,20 +111,20 @@ def init_db():
             reserves  INTEGER NOT NULL DEFAULT 0
         );
     """)
-    # Seed ferme
+    # Seed ferme catu si absente
     c = conn.execute("SELECT count(*) FROM fermes WHERE slug=?", (SEED_FERME,))
     if c.fetchone()[0] == 0:
-        today = date.today()
-        # Next Friday
-        days_to_friday = (4 - today.weekday()) % 7
-        if days_to_friday == 0:
-            days_to_friday = 7
-        next_friday = (today + timedelta(days=days_to_friday)).isoformat()
         conn.execute("INSERT INTO fermes(slug,nom,prix,capacite) VALUES(?,?,?,?)",
                      (SEED_FERME, "Ferme CATU", PRIX_PANIER, 50))
         conn.execute("INSERT INTO stocks(ferme,vendredi,total,reserves) VALUES(?,?,?,?)",
-                     (SEED_FERME, next_friday, 50, 0))
-        conn.commit()
+                     (SEED_FERME, next_friday_str(), 50, 0))
+    # Assure que chaque ferme existante a son stock
+    for row in conn.execute("SELECT slug FROM fermes").fetchall():
+        s = conn.execute("SELECT 1 FROM stocks WHERE ferme=?", (row["slug"],)).fetchone()
+        if not s:
+            conn.execute("INSERT INTO stocks(ferme,vendredi,total,reserves) VALUES(?,?,?,?)",
+                         (row["slug"], next_friday_str(), 50, 0))
+    conn.commit()
     conn.close()
 
 init_db()
@@ -124,7 +166,8 @@ def get_ferme(ferme: str):
     return dict(f)
 
 @app.get("/api/paniers")
-def get_paniers(ferme: str = Query(default=SEED_FERME)):
+def get_paniers(request: Request, ferme: str = Query(default=None)):
+    ferme = ferme or resolve_ferme(request)
     conn = get_db()
     f = conn.execute("SELECT * FROM fermes WHERE slug=?", (ferme,)).fetchone()
     s = conn.execute("SELECT * FROM stocks WHERE ferme=?", (ferme,)).fetchone()
@@ -145,7 +188,7 @@ def get_paniers(ferme: str = Query(default=SEED_FERME)):
 @app.post("/api/reservations")
 async def reserver(request: Request):
     body = await request.json()
-    ferme = body.get("ferme", SEED_FERME)
+    ferme = body.get("ferme") or resolve_ferme(request)
     prenom = body.get("prenom", "").strip()
     tel = body.get("tel", "").strip()
     qte = int(body.get("qte", 1))
@@ -160,15 +203,19 @@ async def reserver(request: Request):
 
     conn = get_db()
     try:
+        f = conn.execute("SELECT * FROM fermes WHERE slug=?", (ferme,)).fetchone()
+        if not f:
+            raise HTTPException(404, "Ferme introuvable")
         s = conn.execute("SELECT * FROM stocks WHERE ferme=?", (ferme,)).fetchone()
         if not s:
             raise HTTPException(404, "Ferme introuvable")
+        prix = f["prix"]
         disponibles = s["total"] - s["reserves"]
         if qte > disponibles:
             raise HTTPException(409, f"Plus que {disponibles} panier(s) disponible(s)")
 
         code = next_code(ferme)
-        total = qte * PRIX_PANIER
+        total = qte * prix
         now = maintenant()
 
         conn.execute(
@@ -194,7 +241,8 @@ async def reserver(request: Request):
         conn.close()
 
 @app.get("/api/commandes")
-def get_commandes(ferme: str = Query(default=SEED_FERME)):
+def get_commandes(request: Request, ferme: str = Query(default=None)):
+    ferme = ferme or resolve_ferme(request)
     conn = get_db()
     rows = conn.execute(
         "SELECT * FROM commandes WHERE ferme=? ORDER BY id DESC", (ferme,)).fetchall()
@@ -207,7 +255,8 @@ def get_commandes(ferme: str = Query(default=SEED_FERME)):
     } for r in rows]
 
 @app.post("/api/commandes/{code}/valider")
-def valider_retrait(code: str, ferme: str = Query(default=SEED_FERME)):
+def valider_retrait(code: str, request: Request, ferme: str = Query(default=None)):
+    ferme = ferme or resolve_ferme(request)
     conn = get_db()
     c = conn.execute("SELECT * FROM commandes WHERE ferme=? AND code=?", (ferme, code)).fetchone()
     if not c:
@@ -231,18 +280,21 @@ def valider_retrait(code: str, ferme: str = Query(default=SEED_FERME)):
     }
 
 @app.get("/api/kpis")
-def get_kpis(ferme: str = Query(default=SEED_FERME)):
+def get_kpis(request: Request, ferme: str = Query(default=None)):
+    ferme = ferme or resolve_ferme(request)
     conn = get_db()
+    f = conn.execute("SELECT * FROM fermes WHERE slug=?", (ferme,)).fetchone()
     s = conn.execute("SELECT * FROM stocks WHERE ferme=?", (ferme,)).fetchone()
     cmds = conn.execute(
         "SELECT count(*) as total, sum(qte) as paniers, sum(retiree) as retires "
         "FROM commandes WHERE ferme=?", (ferme,)).fetchone()
     conn.close()
-    if not s:
+    if not s or not f:
         raise HTTPException(404)
+    prix = f["prix"]
     reserves = s["reserves"]
     retires = cmds["retires"] or 0
-    ca = reserves * PRIX_PANIER
+    ca = reserves * prix
     return {
         "ferme": ferme,
         "reserves": reserves,
