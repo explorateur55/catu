@@ -478,11 +478,14 @@ function doScan(){
   fetch(API_BASE+'/api/commandes/'+code+'/valider',{method:'POST'}).then(r=>r.json()).then(d=>{
     if(d.status==='ok'){
       msg.innerHTML=`<div class=\"scan-anim scan-ok\">
-        <div class=\"scan-icon\">✅</div>
+        <canvas id=\"fw\" width=\"260\" height=\"140\" style=\"position:absolute;left:0;top:0;pointer-events:none\"></canvas>
+        <div class=\"scan-icon\" style=\"position:relative\">✅</div>
         <div class=\"scan-nom\">${d.prenom}</div>
-        <div class=\"scan-detail\">${d.qte} panier(s) — Retrait validé</div>
+        <div class=\"scan-detail\">${d.qte} paniers achetés, retrait validé</div>
         <div class=\"scan-code\">Commande #${d.code}</div>
       </div>`;
+      msg.style.position='relative';
+      fireworks('fw');
       input.value='';
       loadProducer();
     } else {
@@ -494,6 +497,7 @@ function doScan(){
 }
 
 // Remplacer les handlers
+function fireworks(id){const c=document.getElementById(id);if(!c)return;const ctx=c.getContext('2d');let particles=[];const colors=['#4f7f1f','#8cc63e','#ffd700','#ff6b35','#ff4488','#fff'];for(let i=0;i<50;i++){particles.push({x:c.width/2,y:c.height-10,vx:(Math.random()-.5)*8,vy:-Math.random()*10-4,life:1,color:colors[i%colors.length],size:2+Math.random()*3})}function draw(){ctx.clearRect(0,0,c.width,c.height);let alive=false;for(let p of particles){if(p.life<=0)continue;alive=true;p.x+=p.vx;p.y+=p.vy;p.vy+=0.15;p.life-=0.02;ctx.beginPath();ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.life;ctx.fill()}ctx.globalAlpha=1;if(alive)requestAnimationFrame(draw)}draw()}
 document.addEventListener('DOMContentLoaded',()=>{
   const forms = document.querySelectorAll('form');
   forms.forEach(f=>{
