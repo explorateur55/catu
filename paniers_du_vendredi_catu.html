@@ -354,6 +354,36 @@ input,select{
 <script>
 const API_BASE = window.location.origin;
 let currentCode = '';
+let CUR_PRIX = 13;   // prix par défaut, rafraîchi dynamiquement par ferme
+let CUR_NOM  = '';
+let CUR_FERME = '';
+let CUR_CAP  = 0;
+
+// ── Initialisation multi-tenant : charge prix, nom et capacité depuis le backend ──
+function initTenant(){
+  fetch(API_BASE+'/api/paniers')
+    .then(r=>r.json())
+    .then(d=>{
+      if(d && d.prix){
+        CUR_PRIX = d.prix;
+        CUR_NOM  = d.nom || '';
+        CUR_FERME = d.ferme || '';
+        CUR_CAP  = d.total || 0;
+        // Rafraîchit tous les prix affichés
+        document.querySelectorAll('.price strong').forEach(el=>el.textContent=CUR_PRIX+' €');
+        document.querySelectorAll('.unit-price strong').forEach(el=>el.textContent=CUR_PRIX+' €');
+        const total=document.getElementById('total');
+        if(total) total.textContent=(parseInt(document.getElementById('qty').value||1)*CUR_PRIX)+' €';
+        // Nom de la ferme si un titre existe
+        const farmName=document.querySelector('[data-farm-name]');
+        if(farmName) farmName.textContent=CUR_NOM;
+        const priceLine=document.querySelector('.price span');
+        if(priceLine) priceLine.textContent='/ panier';
+      }
+    })
+    .catch(console.error);
+}
+initTenant();
 
 // ── Navigation ──
 function showView(which){
@@ -368,7 +398,7 @@ function showView(which){
 
 function updateTotal(){
   const qty=parseInt(document.getElementById('qty').value||1);
-  document.getElementById('total').textContent=(qty*13)+' €';
+  document.getElementById('total').textContent=(qty*CUR_PRIX)+' €';
 }
 
 // ── Client: charger les dispo ──
