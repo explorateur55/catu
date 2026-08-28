@@ -215,7 +215,7 @@ input,select{
           <div class="basket">
             <img src="https://images.unsplash.com/photo-1566385101042-1a0aa0c1268c?auto=format&fit=crop&w=400&q=80">
             <div><h3>Panier fraîcheur</h3><div class="muted">Tomates, courgettes, salade, aubergines, poivrons…</div></div>
-            <strong>13 €</strong>
+            <strong id="priceBasket">13 €</strong>
           </div>
 
           <div class="basket">
@@ -337,7 +337,7 @@ input,select{
           <div class="section-title"><h2>Pilotage simple</h2><span class="pill">Temps réel</span></div>
           <div class="kpi" style="margin-bottom:10px"><span class="muted">14h–15h</span><strong>8 / 12</strong><span>retraits effectués</span></div>
           <div class="kpi" style="margin-bottom:10px"><span class="muted">15h–16h</span><strong>6 / 9</strong><span>retraits effectués</span></div>
-          <div class="kpi"><span class="muted">À venir</span><strong>13</strong><span>paniers à remettre</span></div>
+          <div class="kpi"><span class="muted">À venir</span><strong id="kpiTotal">13</strong><span>paniers à remettre</span></div>
         </section>
       </div>
     </section>
@@ -372,6 +372,10 @@ function initTenant(){
         // Rafraîchit tous les prix affichés
         document.querySelectorAll('.price strong').forEach(el=>el.textContent=CUR_PRIX+' €');
         document.querySelectorAll('.unit-price strong').forEach(el=>el.textContent=CUR_PRIX+' €');
+        const bP=document.getElementById('priceBasket');
+        if(bP) bP.textContent=CUR_PRIX+' €';
+        const kT=document.getElementById('kpiTotal');
+        if(kT && CUR_CAP) kT.textContent=CUR_CAP;
         const total=document.getElementById('total');
         if(total) total.textContent=(parseInt(document.getElementById('qty').value||1)*CUR_PRIX)+' €';
         // Nom de la ferme si un titre existe
