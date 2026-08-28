@@ -272,13 +272,58 @@ async def update_stock(request: Request):
     return {"status": "ok", "ferme": ferme, "total": total}
 
 @app.get("/api/qr/{code}.png")
-def get_qr(code: str):
-    # QR code URL vers la page de retrait (scan producteur)
-    qr = segno.make_qr(f"CATU\nCommande {code}")
+def get_qr(code: str, request: Request):
+    # La fonction a besoin du host pour construire l'URL absolue du QR
+    base = f"{request.base_url}".rstrip("/")
+    # Le QR encode l'URL de validation — la caméra native le reconnaît comme lien
+    target = f"{base}/scan/{code}"
+    qr = segno.make_qr(target, error='m')
     buf = io.BytesIO()
     qr.save(buf, kind='png', scale=8, dark='#20302a', light='white', border=2)
     buf.seek(0)
     return Response(content=buf.read(), media_type="image/png")
+
+SCAN_PAGE = """<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CATU — Retrait</title>
+<style>
+*{margin:0;box-sizing:border-box}body{font-family:system-ui,sans-serif;background:#f5f2e9;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:28px;box-shadow:0 18px 50px rgba(44,68,52,.14);padding:36px 28px;max-width:420px;width:100%;text-align:center;animation:pop .4s ease-out}
+@keyframes pop{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:scale(1)}}
+.icon{font-size:64px;animation:bounce .6s ease-out}@keyframes bounce{0%{transform:scale(0)}50%{transform:scale(1.3)}100%{transform:scale(1)}}
+.nom{font-size:26px;font-weight:900;margin:14px 0 6px;color:#20302a}
+.detail{font-size:18px;font-weight:800;background:linear-gradient(135deg,#e8f8ec,#d4f0db);border:2px solid #7bc89a;border-radius:16px;padding:16px;margin:16px 0;color:#2a5c3a}
+.code{font-size:13px;color:#6f7d74;font-weight:700}
+.err{font-size:17px;font-weight:800;background:#fde8e8;border:2px solid #e8a0a0;border-radius:16px;padding:16px;color:#9a3e3e}
+.loading{font-size:16px;color:#6f7d74;font-weight:700;padding:20px}
+</style>
+</head>
+<body>
+<div class="card" id="card"><div class="loading">🔄 Validation en cours…</div></div>
+<script>
+const code = location.pathname.split('/').pop();
+fetch(location.origin+'/api/commandes/'+code+'/valider',{method:'POST'})
+.then(r=>r.json()).then(d=>{
+  if(d.status==='ok'){
+    document.getElementById('card').innerHTML=
+      '<div class="icon">✅</div><div class="nom">'+d.prenom+'</div>'+
+      '<div class="detail">'+d.qte+' paniers achetés, retrait validé</div>'+
+      '<div class="code">Commande #'+d.code+'</div>';
+    fireworks();
+  } else {
+    document.getElementById('card').innerHTML='<div class="err">⚠️ '+(d.detail||'Commande introuvable')+'</div>';
+  }
+}).catch(()=>{document.getElementById('card').innerHTML='<div class="err">⚠️ Pas de connexion</div>'});
+function fireworks(){for(let i=0;i<100;i++){const el=document.createElement('div');const colors=['#ff0','#ff6600','#ff3366','#8cc63e','#4f7f1f','#ffcc00','#ff4488','#00d4ff','#fff'];const cc=colors[i%colors.length];const a=Math.random()*Math.PI*2;const r=70+Math.random()*220;const cx=innerWidth/2,cy=innerHeight*0.4;const tx=Math.cos(a)*r,ty=Math.sin(a)*r;const s=4+Math.random()*9;el.style.cssText='position:fixed;left:'+cx+'px;top:'+cy+'px;width:'+s+'px;height:'+s+'px;background:'+cc+';border-radius:50%;z-index:9999;pointer-events:none;transform:translate(0,0);transition:transform 1.8s ease-out,opacity 1.8s ease-out;opacity:1;box-shadow:0 0 8px '+cc;document.body.appendChild(el);requestAnimationFrame(()=>{el.style.transform='translate('+tx+'px,'+ty+'px)';el.style.opacity='0'});setTimeout(()=>el.remove(),2000)}}
+</script>
+</body>
+</html>"""
+
+@app.get("/scan/{code}", response_class=HTMLResponse)
+def scan_page(code: str):
+    return SCAN_PAGE
 
 # ── Routes HTML ───────────────────────────────────
 
