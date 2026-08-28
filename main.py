@@ -3,7 +3,7 @@ Greenstuff API — Backend Catu (v1 autonome)
 FastAPI + SQLite + QR codes segno
 Sert le site vitrine, l'appli paniers et l'API REST
 """
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 from pathlib import Path
 import json, io, os, sqlite3
 
@@ -77,7 +77,7 @@ def init_db():
         days_to_friday = (4 - today.weekday()) % 7
         if days_to_friday == 0:
             days_to_friday = 7
-        next_friday = today.replace(day=today.day + days_to_friday).isoformat()
+        next_friday = (today + timedelta(days=days_to_friday)).isoformat()
         conn.execute("INSERT INTO fermes(slug,nom,prix,capacite) VALUES(?,?,?,?)",
                      (SEED_FERME, "Ferme CATU", PRIX_PANIER, 50))
         conn.execute("INSERT INTO stocks(ferme,vendredi,total,reserves) VALUES(?,?,?,?)",
