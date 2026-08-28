@@ -1,5 +1,5 @@
 FROM python:3.12-slim
-# Build 1787918578 3burst
+# Build 1787918755 canvfix
 WORKDIR /app
 RUN pip install --no-cache-dir fastapi uvicorn segno
 COPY main.py .
