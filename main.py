@@ -273,9 +273,11 @@ async def update_stock(request: Request):
 
 @app.get("/api/qr/{code}.png")
 def get_qr(code: str, request: Request):
-    # La fonction a besoin du host pour construire l'URL absolue du QR
     base = f"{request.base_url}".rstrip("/")
-    # Le QR encode l'URL de validation — la caméra native le reconnaît comme lien
+    # Forcer https si le host ressemble à un domaine public (pas une IP)
+    host = request.headers.get("host", "")
+    if "mapvisibility" in host or "localhost" not in host and not host.split(":")[0].replace(".","").isdigit():
+        base = base.replace("http://", "https://")
     target = f"{base}/scan/{code}"
     qr = segno.make_qr(target, error='m')
     buf = io.BytesIO()
