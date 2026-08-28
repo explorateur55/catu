@@ -4,3 +4,8 @@ services:
     ports:
       - "8195:80"
     restart: unless-stopped
+    volumes:
+      - catu-data:/data
+
+volumes:
+  catu-data:
