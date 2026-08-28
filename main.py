@@ -323,6 +323,49 @@ async def update_stock(request: Request):
     conn.close()
     return {"status": "ok", "ferme": ferme, "total": total}
 
+@app.post("/api/admin/ferme")
+async def admin_create_ferme(request: Request):
+    """Crée ou met à jour une ferme (slug, nom, prix, capacite) + son stock.
+    Endpoint admin pour ajouter un nouveau maraîcher sans SQL manuel.
+    Bod: {"slug":"martin","nom":"Ferme Martin","prix":15,"capacite":40}
+    Idempotent : re-poster met à jour prix/capacité, préserve le stock."""
+    body = await request.json()
+    slug = str(body.get("slug", "")).strip().lower()
+    nom = str(body.get("nom", "")).strip()
+    prix = int(body.get("prix", PRIX_PANIER))
+    capacite = int(body.get("capacite", 50))
+
+    if not slug or not nom:
+        raise HTTPException(400, "slug et nom requis")
+    if not slug.isalnum() and "_" not in slug and "-" not in slug:
+        raise HTTPException(400, "slug invalide (alphanumérique, _ ou - uniquement)")
+    if prix < 1 or prix > 500:
+        raise HTTPException(400, "prix entre 1 et 500 €")
+    if capacite < 1 or capacite > 500:
+        raise HTTPException(400, "capacite entre 1 et 500")
+
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO fermes(slug,nom,prix,capacite) VALUES(?,?,?,?) "
+        "ON CONFLICT(slug) DO UPDATE SET nom=excluded.nom, prix=excluded.prix, capacite=excluded.capacite",
+        (slug, nom, prix, capacite))
+    # Stock si absent
+    s = conn.execute("SELECT * FROM stocks WHERE ferme=?", (slug,)).fetchone()
+    if not s:
+        conn.execute("INSERT INTO stocks(ferme,vendredi,total,reserves) VALUES(?,?,?,?)",
+                     (slug, next_friday_str(), capacite, 0))
+    conn.commit()
+    conn.close()
+    return {"status": "ok", "ferme": {"slug": slug, "nom": nom, "prix": prix, "capacite": capacite}}
+
+@app.get("/api/admin/fermes")
+def admin_list_fermes():
+    """Liste toutes les fermes. Idéal pour vérifier le multi-tenant."""
+    conn = get_db()
+    rows = conn.execute("SELECT slug,nom,prix,capacite FROM fermes ORDER BY slug").fetchall()
+    conn.close()
+    return {"fermes": [dict(r) for r in rows]}
+
 @app.get("/api/qr/{code}.png")
 def get_qr(code: str, request: Request):
     base = f"{request.base_url}".rstrip("/")
