@@ -1,5 +1,5 @@
 FROM python:3.12-slim
-# Build 1787915123 — scan QR sans prompt
+# Build 1787916469
 WORKDIR /app
 RUN pip install --no-cache-dir fastapi uvicorn segno
 COPY main.py .
