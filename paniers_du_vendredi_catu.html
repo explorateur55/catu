@@ -498,7 +498,7 @@ function doScan(){
 }
 
 // Remplacer les handlers
-function fireworks(canvas){const c=canvas;const rect=c.getBoundingClientRect();c.width=rect.width;c.height=rect.height;const ctx=c.getContext('2d');let particles=[];const colors=['#4f7f1f','#8cc63e','#ffd700','#ff6b35','#ff4488','#fff','#ffcc00'];for(let i=0;i<80;i++){particles.push({x:c.width/2,y:c.height-5,vx:(Math.random()-.5)*10,vy:-Math.random()*12-6,life:1,color:colors[i%colors.length],size:3+Math.random()*5})}function draw(){ctx.clearRect(0,0,c.width,c.height);let alive=false;for(let p of particles){if(p.life<=0)continue;alive=true;p.x+=p.vx;p.y+=p.vy;p.vy+=0.18;p.life-=0.018;ctx.beginPath();ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.life;ctx.fill()}ctx.globalAlpha=1;if(alive)requestAnimationFrame(draw)}draw()}
+function fireworks(canvas){const c=canvas;const rect=c.getBoundingClientRect();c.width=rect.width;c.height=rect.height;const ctx=c.getContext('2d');let particles=[];const colors=['#ff0','#ff6600','#ff3366','#8cc63e','#4f7f1f','#fff','#ffcc00','#ff4488'];for(let i=0;i<120;i++){particles.push({x:c.width/2+(Math.random()-.5)*30,y:c.height-8,vx:(Math.random()-.5)*14,vy:-Math.random()*14-6,life:1,color:colors[i%colors.length],size:3+Math.random()*6})}function draw(){ctx.clearRect(0,0,c.width,c.height);let alive=false;for(let p of particles){if(p.life<=0)continue;alive=true;p.x+=p.vx;p.y+=p.vy;p.vy+=0.12;p.life-=0.012;ctx.beginPath();ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.life;ctx.fill()}ctx.globalAlpha=1;if(alive)requestAnimationFrame(draw)}draw()}
 document.addEventListener('DOMContentLoaded',()=>{
   const forms = document.querySelectorAll('form');
   forms.forEach(f=>{
