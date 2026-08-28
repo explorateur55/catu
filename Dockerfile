@@ -1,5 +1,5 @@
 FROM python:3.12-slim
-# Build 1787912801 — BDD tmp, sans volume
+# Build 1787915123 — scan QR sans prompt
 WORKDIR /app
 RUN pip install --no-cache-dir fastapi uvicorn segno
 COPY main.py .
